@@ -605,14 +605,17 @@
             $(modal).show();
             setTimeout(function(){
                 if($this.options.self){
+                   var content=$(modal).find('.modal__content'); 
                    $(modal).addClass('modal--active');
-                   $(modal).find('.modal__content').addClass('modal__content--active');  
+                   $(content).addClass('modal__content--active');  
+
+                   window.addEventListener('transitionend', $this.hideTmpDiv, false);
                 } 
                 else $(modal).addClass('active')
             }, 0);
             if(this.options.history){
                 // 브라우저 history 객체에 추가 
-                var object = {'type': 'modal','target': modal}
+                var object = {'type': 'modal','target': {'id':modal,'self':this.options.self}}
                 utility.addHistoryObject(object,title,url);  
             }
           
@@ -629,39 +632,49 @@
             obj.$element.trigger('focus').trigger(e);
       }
 
-      Modal.prototype.hide = function (e) {
+      Modal.prototype.hide = function (event) {
            if(this.options.history) history.back();
-           else this.nonHistoryHide();
+           else this.nonHistoryHide(event);
       }
      
-     Modal.prototype.historyHide = function (e) {
+     Modal.prototype.historyHide = function () {
             this.isShown = false
-            if (e) e.preventDefault()
+            if (event) event.preventDefault()
             var e    = $.Event('hide.rc.modal');
             this.$element.trigger(e) 
             this.afterHide();
       }
 
-      Modal.prototype.nonHistoryHide = function () {
+      Modal.prototype.nonHistoryHide = function (event) {
             this.isShown = false
+            if (event) event.preventDefault();
             var modal=this.$element;
             var e    = $.Event('hide.rc.modal');
             $(modal).trigger(e)
-            $(modal).removeClass('active');
-            setTimeout(function(){$(modal).hide();},300); 
-            this.afterHide();
+            if(this.options.self) this.hideSelfModal();
+            else {
+                $(modal).removeClass('active');
+                setTimeout(function(){$(modal).hide();},300); 
+                this.afterHide();
+            }
+                
       }
 
       Modal.prototype.afterHide=function(){
            var e = $.Event('hidden.rc.modal');
            this.$element.trigger(e);     
       }
-
-      Modal.prototype.makeTemdiv=function(trig,modal){
+       
+          Modal.prototype.makeTmDiv=function(trig,modal){
             this.$tmpDiv = $(document.createElement('div'))
                   .addClass('modal__temp')
                   .appendTo(trig)
             this.moveTrig(trig, modal, this.$tmpDiv);
+      }
+
+      Modal.prototype.hideTmpDiv=function(){
+           $('.modal__temp').css('opacity','0');
+           window.removeEventListener('transitionend', this.hideTmpDiv, false);
       }
 
       Modal.prototype.moveTrig=function(trig,modal,tmpDiv){
@@ -705,6 +718,38 @@
           }, 400);
       }
 
+      Modal.prototype.hideSelfModal=function(){
+          var tmpDiv=$(document).find('.modal__temp');
+          var modal=this.$element;
+          var content=$(modal).find('.modal__content');
+          var trig=$(document).find('.modal__trigger');
+          // temp div 
+          $(tmpDiv).css("opacity",1);
+          $(tmpDiv).removeAttr("style");
+
+          // modal 
+          $(modal).removeClass('modal--active');
+          $(content).removeClass('modal__content--active');
+          $(trig).css('transform','none');
+          $(trig).css('webkitTransform','none');
+          window.addEventListener('transitionend',this.removeTmpDiv(tmpDiv),false);
+          this.isShown = false
+          if (event) event.preventDefault()
+          var e    = $.Event('hide.rc.modal');
+          this.$element.trigger(e) 
+          this.afterHide();
+      }
+
+      Modal.prototype.removeTmpDiv=function(tmpDiv){
+          setTimeout(function() {
+               window.requestAnimationFrame(function() {
+                  // remove the temp div from the dom with a slight delay so the animation looks good
+                  $(tmpDiv).remove();
+              });
+          }, 350);
+      }  
+     
+
 
       var old = $.fn.modal
 
@@ -733,7 +778,7 @@
                    var len = data.options.target.length;
                    var modalIdTrimmed = data.options.target.substring(1, len);
                    var modalDiv=document.getElementById(modalIdTrimmed); 
-                   data.makeTemdiv(_relatedTarget,modalDiv);
+                   data.makeTmDiv(_relatedTarget,modalDiv);
                 }else{
                     if (typeof option == 'string' && option!='toggle') data[option](_relatedTarget)
                     else if (options.show) data.show(_relatedTarget)    
