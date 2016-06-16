@@ -656,25 +656,19 @@
                 $(modal).removeClass('active');
                 setTimeout(function(){$(modal).hide();},300); 
                 this.afterHide();
-            }
-                
+            }                
       }
 
       Modal.prototype.afterHide=function(){
            var e = $.Event('hidden.rc.modal');
            this.$element.trigger(e);     
       }
-       
-          Modal.prototype.makeTmDiv=function(trig,modal){
+
+      Modal.prototype.makeTmpDiv=function(trig,modal){
             this.$tmpDiv = $(document.createElement('div'))
                   .addClass('modal__temp')
                   .appendTo(trig)
             this.moveTrig(trig, modal, this.$tmpDiv);
-      }
-
-      Modal.prototype.hideTmpDiv=function(){
-           $('.modal__temp').css('opacity','0');
-           window.removeEventListener('transitionend', this.hideTmpDiv, false);
       }
 
       Modal.prototype.moveTrig=function(trig,modal,tmpDiv){
@@ -685,16 +679,26 @@
           var transX, transY, scaleX, scaleY;
           var xc = window.innerWidth / 2;
           var yc = window.innerHeight / 2;
+          var view=$(document).find('.content');
+          var bar =$(document).find('.bar-nav');
+          var bar_h =bar.innerHeight();
+          var view_h=view.innerHeight();
+          var view_w=view.innerWidth();
+
+          // set modal size
+          $(modal).css({'width':view_w,'height':view_h,'top':bar_h});
+          $(modal).find('.modal__content').css({'width':view_w,'height':view_h}); 
+
 
           // this class increases z-index value so the button goes overtop the other buttons
-          trig.classList.add('modal__trigger--active');
+          $(trig).addClass('modal__trigger--active');
 
           // these values are used for scale the temporary div to the same size as the modal
-          scaleX = mProps.width / trigProps.width;
-          scaleY = mProps.height / trigProps.height;
+          scaleX = view_w;//mProps.width / trigProps.width;
+          scaleY = view_h;//mProps.height / trigProps.height;
 
-          scaleX = scaleX.toFixed(3); // round to 3 decimal places
-          scaleY = scaleY.toFixed(3);
+          //scaleX = scaleX.toFixed(3); // round to 3 decimal places
+          //scaleY = scaleY.toFixed(3);
 
 
           // these values are used to move the button to the center of the window
@@ -706,16 +710,26 @@
             transY = Math.round(mProps.height / 2 + mProps.top - trigProps.top - trigProps.height / 2);
           }
           // translate button to center of screen
-          trig.style.transform = 'translate(' + transX + 'px, ' + transY + 'px)';
-          trig.style.webkitTransform = 'translate(' + transX + 'px, ' + transY + 'px)';
+          //trig.style.transform = 'translate(' + transX + 'px, ' + transY + 'px)';
+          //trig.style.webkitTransform = 'translate(' + transX + 'px, ' + transY + 'px)';
+          $(trig).css({
+             'transform': 'translateY(-100px)',
+             'z-index' : 10000
+          });
+
           // expand temporary div to the same size as the modal
           $(tmpDiv).css('transform','scale(' + scaleX + ',' + scaleY + ')');
           $(tmpDiv).css('webkitTransform','scale(' + scaleX + ',' + scaleY + ')');
-          window.setTimeout(function() {
-            window.requestAnimationFrame(function() {
-               $this.show();
-            });
-          }, 400);
+  
+          window.requestAnimationFrame(function() {
+             $this.show();
+          });
+     
+      }
+
+      Modal.prototype.hideTmpDiv=function(){
+           $('.modal__temp').css('opacity','0');
+           window.removeEventListener('transitionend', this.hideTmpDiv, false);
       }
 
       Modal.prototype.hideSelfModal=function(){
@@ -778,7 +792,10 @@
                    var len = data.options.target.length;
                    var modalIdTrimmed = data.options.target.substring(1, len);
                    var modalDiv=document.getElementById(modalIdTrimmed); 
-                   data.makeTmDiv(_relatedTarget,modalDiv);
+                    setTimeout(function(){
+                      data.makeTmpDiv(_relatedTarget,modalDiv); 
+                   },300)
+                   
                 }else{
                     if (typeof option == 'string' && option!='toggle') data[option](_relatedTarget)
                     else if (options.show) data.show(_relatedTarget)    
